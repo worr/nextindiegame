@@ -1,3 +1,4 @@
 nextindiegame.git
 *.ini
 *.db
+.*.sw[op]

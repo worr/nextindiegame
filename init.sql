@@ -1,0 +1,13 @@
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+CREATE TABLE genre(id integer primary key autoincrement, value text unique not null);
+INSERT INTO "genre" VALUES(1,'top-down shoot ''em up');
+CREATE TABLE fantasy(id integer primary key autoincrement, value text unique not null);
+INSERT INTO "fantasy" VALUES(1,'a medieval kingdom');
+CREATE TABLE emotion(id integer primary key autoincrement, value text unique not null);
+INSERT INTO "emotion" VALUES(1,'finding a game dev job as a white guy');
+DELETE FROM sqlite_sequence;
+INSERT INTO "sqlite_sequence" VALUES('genre',1);
+INSERT INTO "sqlite_sequence" VALUES('fantasy',1);
+INSERT INTO "sqlite_sequence" VALUES('emotion',1);
+COMMIT;
