@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"code.google.com/p/gcfg"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
@@ -33,54 +34,82 @@ type Config struct {
 	}
 }
 
-type GameOutput struct {
+type Game struct {
 	Genre   string
 	Emotion string
 	Fantasy string
 	Link    string
 }
 
-// A helper function to fetch a random val from a table
-func getRandomVal(db *sql.DB, table string) (string, error) {
-	var ret string
+type ApplicationError struct {
+	Error string
+}
 
-	rows, err := db.Query(fmt.Sprintf("select value from %s order by random() limit 1", table))
+// A helper function to fetch a random val from a table
+func getRandomVal(db *sql.DB, table string) (int, string, error) {
+	var ret struct { Id int; Value string }
+
+	rows, err := db.Query(fmt.Sprintf("select id, value from %s order by random() limit 1", table))
 	if err != nil {
-		return "", err
+		return -1, "", err
 	}
 
 	rows.Next()
-	if err = rows.Scan(&ret); err != nil {
-		return "", err
+	if err = rows.Scan(&ret.Id, &ret.Value); err != nil {
+		return -1, "", err
 	}
 
-	return ret, nil
+	return ret.Id, ret.Value, nil
 }
 
-// The main route for the site
-func getRandom(db *sql.DB, templates map[string]*template.Template, params martini.Params) string {
+func getLink(genreId, emotionId, fantasyId int) string {
+	return fmt.Sprintf("/game/?genre=%d&emotion=%d&fantasy=%d",
+		genreId,
+		emotionId,
+		fantasyId)
+}
+
+func NewRandomGame(db *sql.DB) (*Game, error) {
 	var genre, emotion, fantasy string
+	var genreId, emotionId, fantasyId int
 	var err error
 
-	if genre, err = getRandomVal(db, GENRE_TABLE); err != nil {
-		return fmt.Sprintf("%v", err)
+	if genreId, genre, err = getRandomVal(db, GENRE_TABLE); err != nil {
+		return nil, err
 	}
 
-	if emotion, err = getRandomVal(db, EMOTION_TABLE); err != nil {
-		return fmt.Sprintf("%v", err)
+	if emotionId, emotion, err = getRandomVal(db, EMOTION_TABLE); err != nil {
+		return nil, err
 	}
 
-	if fantasy, err = getRandomVal(db, FANTASY_TABLE); err != nil {
-		return fmt.Sprintf("%v", err)
+	if fantasyId, fantasy, err = getRandomVal(db, FANTASY_TABLE); err != nil {
+		return nil, err
 	}
 
+	return &Game{genre, emotion, fantasy, getLink(genreId, emotionId, fantasyId)}, nil
+}
+
+// Routes
+// API routes
+func randGame(db *sql.DB, templates map[string]*template.Template, params martini.Params) string {
+	var game *Game
+	var err error
+
+	if game, err = NewRandomGame(db); err != nil {
+		log.Fatalf("%v", err)
+	}
+	fmt.Printf("%v\n", game)
+	data, _ := json.Marshal(game)
+	return bytes.NewBuffer(data).String()
+}
+
+// HTML routes
+func index(db *sql.DB, templates map[string]*template.Template, params martini.Params) string {
 	buf := bytes.NewBuffer(make([]byte, 0))
-	if err = templates["main.html"].Execute(buf, &GameOutput{genre, emotion, fantasy, ""}); err != nil {
-		return fmt.Sprintf("%v", err)
+	if err := templates["main.html"].Execute(buf, nil); err != nil {
 	}
 	return buf.String()
 }
-
 
 // Add a template that inherits from the base template (everything)
 func addTemplate(cfg *Config, templates map[string]*template.Template, name string) error {
@@ -96,7 +125,7 @@ func addTemplate(cfg *Config, templates map[string]*template.Template, name stri
 		return err
 	}
 
-	templates[name], err = template.New("main").ParseFiles(kPath,  bPath)
+	templates[name], err = template.New("main").ParseFiles(kPath, bPath)
 	return err
 }
 
@@ -125,7 +154,8 @@ func start(context *cli.Context) {
 	m.Map(templates)
 	m.Map(db)
 
-	m.Get("/", getRandom)
+	m.Get("/", index)
+	m.Get("/api/game/", randGame)
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", cfg.Server.Hostname, cfg.Server.Port), m))
 }
