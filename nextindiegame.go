@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 )
 
 const GENRE_TABLE = "genre"
@@ -52,21 +53,27 @@ func getRandomVal(db *sql.DB, table string) (int, string, error) {
 		Value string
 	}
 
-	rows, err := db.Query(fmt.Sprintf("select id, value from %s order by random() limit 1", table))
-	if err != nil {
-		return -1, "", err
-	}
-
-	rows.Next()
-	if err = rows.Scan(&ret.Id, &ret.Value); err != nil {
+	row := db.QueryRow(fmt.Sprintf("select id, value from %s order by random() limit 1", table))
+	if err := row.Scan(&ret.Id, &ret.Value); err != nil {
 		return -1, "", err
 	}
 
 	return ret.Id, ret.Value, nil
 }
 
+func getVal(db *sql.DB, table string, id int) (string, error) {
+	var ret string
+
+	row := db.QueryRow(fmt.Sprintf("select value from %s where id = ?", table), id)
+	if err := row.Scan(&ret); err != nil {
+		return "", err
+	}
+
+	return ret, nil
+}
+
 func getLink(genreId, emotionId, fantasyId int) string {
-	return fmt.Sprintf("/game/?genre=%d&emotion=%d&fantasy=%d",
+	return fmt.Sprintf("/l/%02x%02x%02x",
 		genreId,
 		emotionId,
 		fantasyId)
@@ -92,6 +99,38 @@ func NewRandomGame(db *sql.DB) (*Game, error) {
 	return &Game{genre, emotion, fantasy, getLink(genreId, emotionId, fantasyId)}, nil
 }
 
+func NewLinkGame(db *sql.DB, link string) (*Game, error) {
+	var genreId, emotionId, fantasyId int64
+	var genre, emotion, fantasy string
+	var err error
+
+	if genreId, err = strconv.ParseInt(link[0:2], 16, 0); err != nil {
+		return nil, err
+	}
+
+	if emotionId, err = strconv.ParseInt(link[2:4], 16, 0); err != nil {
+		return nil, err
+	}
+
+	if fantasyId, err = strconv.ParseInt(link[4:6], 16, 0); err != nil {
+		return nil, err
+	}
+
+	if genre, err = getVal(db, "genre", int(genreId)); err != nil {
+		return nil, err
+	}
+
+	if emotion, err = getVal(db, "emotion", int(emotionId)); err != nil {
+		return nil, err
+	}
+
+	if fantasy, err = getVal(db, "fantasy", int(fantasyId)); err != nil {
+		return nil, err
+	}
+
+	return &Game{genre, emotion, fantasy, fmt.Sprintf("/l/%s", link)}, nil
+}
+
 // Routes
 // API routes
 func randGame(db *sql.DB, templates map[string]*template.Template, params martini.Params) string {
@@ -108,8 +147,27 @@ func randGame(db *sql.DB, templates map[string]*template.Template, params martin
 // HTML routes
 func index(db *sql.DB, templates map[string]*template.Template, params martini.Params) string {
 	buf := bytes.NewBuffer(make([]byte, 0))
-	if err := templates["main.html"].Execute(buf, nil); err != nil {
+	var game *Game
+	var err error
+
+	for k, v := range params {
+		if k == "link" {
+			if game, err = NewLinkGame(db, v); err != nil {
+				log.Fatalf("%v", err)
+			}
+		}
 	}
+
+	if game == nil {
+		if game, err = NewRandomGame(db); err != nil {
+			log.Fatalf("%v", err)
+		}
+	}
+
+	if err = templates["main.html"].Execute(buf, game); err != nil {
+		log.Fatalf("%v", err)
+	}
+
 	return buf.String()
 }
 
@@ -157,6 +215,7 @@ func start(context *cli.Context) {
 	m.Map(db)
 
 	m.Get("/", index)
+	m.Get("/l/:link", index)
 	m.Get("/api/game/", randGame)
 
 	m.Use(martini.Static("static"))

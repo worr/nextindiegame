@@ -3,9 +3,11 @@
 {{ define "content" }}
 <section>
 	<div id="game">
+		A {{ .Genre }} about {{ .Emotion }} in {{ .Fantasy }}
 	</div>
 
-	<button href="#" id="generate-button">Generate</a>
+	<button href="#" id="generate-button">Generate</button>
+	<a id="permalink" href="{{ .Link }}">{{ .Link }}</a>
 </section>
 
 <script>

@@ -25,6 +25,10 @@ ng = (function() {
 					replace(/_/, data.Emotion).
 					replace(/_/, data.Fantasy);
 				document.querySelector("#game").innerHTML = text;
+
+				var link = document.querySelector("#permalink");
+				link.href = data.Link;
+				link.innerHTML = data.Link;
 			}
 		}
 	};
