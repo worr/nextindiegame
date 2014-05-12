@@ -96,7 +96,7 @@ func addTemplate(cfg *Config, templates map[string]*template.Template, name stri
 		return err
 	}
 
-	templates[name], err = template.New(name).ParseFiles(bPath, kPath)
+	templates[name], err = template.New("main").ParseFiles(kPath,  bPath)
 	return err
 }
 
