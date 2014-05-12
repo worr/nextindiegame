@@ -5,12 +5,14 @@ import (
 	"code.google.com/p/gcfg"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
 	_ "github.com/mattn/go-sqlite3"
 	"html/template"
 	"log"
+	"log/syslog"
 	"net/http"
 	"os"
 	"path"
@@ -104,6 +106,11 @@ func NewLinkGame(db *sql.DB, link string) (*Game, error) {
 	var genre, emotion, fantasy string
 	var err error
 
+	// Link UNACCEPTABLE
+	if len(link) != 6 {
+		return nil, errors.New("UNACCEPTABLE")
+	}
+
 	if genreId, err = strconv.ParseInt(link[0:2], 16, 0); err != nil {
 		return nil, err
 	}
@@ -131,21 +138,28 @@ func NewLinkGame(db *sql.DB, link string) (*Game, error) {
 	return &Game{genre, emotion, fantasy, fmt.Sprintf("/l/%s", link)}, nil
 }
 
+func logError(logger *syslog.Writer, err error) {
+	msg := fmt.Sprintf("%v", err)
+	logger.Emerg(msg)
+	log.Print(msg)
+}
+
 // Routes
 // API routes
-func randGame(db *sql.DB, templates map[string]*template.Template, params martini.Params) string {
+func randGame(db *sql.DB, templates map[string]*template.Template, logger *syslog.Writer, params martini.Params) string {
 	var game *Game
 	var err error
 
 	if game, err = NewRandomGame(db); err != nil {
-		log.Fatalf("%v", err)
+		logError(logger, err)
+		return fmt.Sprintf("error getting game data")
 	}
 	data, _ := json.Marshal(game)
 	return bytes.NewBuffer(data).String()
 }
 
 // HTML routes
-func index(db *sql.DB, templates map[string]*template.Template, params martini.Params) string {
+func index(db *sql.DB, templates map[string]*template.Template, logger *syslog.Writer, params martini.Params) string {
 	buf := bytes.NewBuffer(make([]byte, 0))
 	var game *Game
 	var err error
@@ -153,19 +167,22 @@ func index(db *sql.DB, templates map[string]*template.Template, params martini.P
 	for k, v := range params {
 		if k == "link" {
 			if game, err = NewLinkGame(db, v); err != nil {
-				log.Fatalf("%v", err)
+				logError(logger, err)
+				return fmt.Sprintf("error getting game data")
 			}
 		}
 	}
 
 	if game == nil {
 		if game, err = NewRandomGame(db); err != nil {
-			log.Fatalf("%v", err)
+			logError(logger, err)
+			return fmt.Sprintf("error getting game data")
 		}
 	}
 
 	if err = templates["main.html"].Execute(buf, game); err != nil {
-		log.Fatalf("%v", err)
+		logError(logger, err)
+		return fmt.Sprintf("error getting game data")
 	}
 
 	return buf.String()
@@ -208,11 +225,17 @@ func start(context *cli.Context) {
 		log.Fatalf("Could not compile templates: %v", err)
 	}
 
+	var logger *syslog.Writer
+	if logger, err = syslog.New(syslog.LOG_LOCAL0|syslog.LOG_INFO, "nextindiega.me"); err != nil {
+		log.Fatalf("Could not initialize logger: %v", err)
+	}
+
 	m := martini.Classic()
 
 	// Load my templates and my db into my context for my route handlers
 	m.Map(templates)
 	m.Map(db)
+	m.Map(logger)
 
 	m.Get("/", index)
 	m.Get("/l/:link", index)
