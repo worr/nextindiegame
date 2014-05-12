@@ -159,6 +159,8 @@ func start(context *cli.Context) {
 	m.Get("/", index)
 	m.Get("/api/game/", randGame)
 
+	m.Use(martini.Static("static"))
+
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", cfg.Server.Hostname, cfg.Server.Port), m))
 }
 

@@ -2,6 +2,13 @@
 
 {{ define "content" }}
 <section>
-A Genre about Emotion in Fantasy
+	<div id="game">
+	</div>
+
+	<button href="#" id="generate-button">Generate</a>
 </section>
+
+<script>
+	document.querySelector("#generate-button").addEventListener("click", ng.getNewGame, false);
+</script>
 {{ end }}
