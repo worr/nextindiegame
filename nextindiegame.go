@@ -47,7 +47,10 @@ type ApplicationError struct {
 
 // A helper function to fetch a random val from a table
 func getRandomVal(db *sql.DB, table string) (int, string, error) {
-	var ret struct { Id int; Value string }
+	var ret struct {
+		Id    int
+		Value string
+	}
 
 	rows, err := db.Query(fmt.Sprintf("select id, value from %s order by random() limit 1", table))
 	if err != nil {
@@ -98,7 +101,6 @@ func randGame(db *sql.DB, templates map[string]*template.Template, params martin
 	if game, err = NewRandomGame(db); err != nil {
 		log.Fatalf("%v", err)
 	}
-	fmt.Printf("%v\n", game)
 	data, _ := json.Marshal(game)
 	return bytes.NewBuffer(data).String()
 }
