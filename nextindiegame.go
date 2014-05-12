@@ -146,7 +146,7 @@ func logError(logger *syslog.Writer, err error) {
 
 // Routes
 // API routes
-func randGame(db *sql.DB, templates map[string]*template.Template, logger *syslog.Writer, params martini.Params) string {
+func randGame(db *sql.DB, logger *syslog.Writer, params martini.Params) string {
 	var game *Game
 	var err error
 
@@ -188,6 +188,16 @@ func index(db *sql.DB, templates map[string]*template.Template, logger *syslog.W
 	return buf.String()
 }
 
+func faq(templates map[string]*template.Template, logger *syslog.Writer, params martini.Params) string {
+	buf := bytes.NewBuffer(make([]byte, 0))
+	if err := templates["faq.html"].Execute(buf, nil); err != nil {
+		logError(logger, err)
+		return fmt.Sprintf("error formatting faq")
+	}
+
+	return buf.String()
+}
+
 // Add a template that inherits from the base template (everything)
 func addTemplate(cfg *Config, templates map[string]*template.Template, name string) error {
 	var err error
@@ -221,8 +231,10 @@ func start(context *cli.Context) {
 	}
 	defer db.Close() // Will never close lololol
 
-	if err = addTemplate(&cfg, templates, "main.html"); err != nil {
-		log.Fatalf("Could not compile templates: %v", err)
+	for _, template := range []string{"main.html", "faq.html"} {
+		if err = addTemplate(&cfg, templates, template); err != nil {
+			log.Fatalf("Could not compile template %v: %v", template, err)
+		}
 	}
 
 	var logger *syslog.Writer
@@ -240,6 +252,7 @@ func start(context *cli.Context) {
 	m.Get("/", index)
 	m.Get("/l/:link", index)
 	m.Get("/api/game/", randGame)
+	m.Get("/faq", faq)
 
 	m.Use(martini.Static("static"))
 
