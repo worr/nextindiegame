@@ -21,9 +21,14 @@ ng = (function() {
 					document.querySelector("#game").innerHTML = data;
 				}
 
-				text = text.replace(/_/, data.Genre).
-					replace(/_/, data.Emotion).
-					replace(/_/, data.Fantasy);
+				if (data.Genre) {
+					text = text.replace(/_/, data.Genre).
+						replace(/_/, data.Emotion).
+						replace(/_/, data.Fantasy);
+				} else {
+					text = data.Error
+				}
+
 				document.querySelector("#game").innerHTML = text;
 
 				var link = document.querySelector("#permalink");

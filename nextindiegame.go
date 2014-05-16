@@ -149,12 +149,19 @@ func logError(logger *syslog.Writer, err error) {
 func randGame(db *sql.DB, logger *syslog.Writer, params martini.Params) string {
 	var game *Game
 	var err error
+	var data []byte
 
 	if game, err = NewRandomGame(db); err != nil {
 		logError(logger, err)
-		return fmt.Sprintf("error getting game data")
+		data, _ = json.Marshal(ApplicationError{"error getting game data"})
+		return bytes.NewBuffer(data).String()
 	}
-	data, _ := json.Marshal(game)
+
+	if data, err = json.Marshal(game); err != nil {
+		logError(logger, err)
+		data, _ = json.Marshal(ApplicationError{"error formatting data"})
+	}
+
 	return bytes.NewBuffer(data).String()
 }
 
@@ -168,7 +175,7 @@ func index(db *sql.DB, templates map[string]*template.Template, logger *syslog.W
 		if k == "link" {
 			if game, err = NewLinkGame(db, v); err != nil {
 				logError(logger, err)
-				return fmt.Sprintf("error getting game data")
+				return "error getting game data"
 			}
 		}
 	}
@@ -176,13 +183,13 @@ func index(db *sql.DB, templates map[string]*template.Template, logger *syslog.W
 	if game == nil {
 		if game, err = NewRandomGame(db); err != nil {
 			logError(logger, err)
-			return fmt.Sprintf("error getting game data")
+			return "error getting game data"
 		}
 	}
 
 	if err = templates["main.html"].Execute(buf, game); err != nil {
 		logError(logger, err)
-		return fmt.Sprintf("error getting game data")
+		return "error getting game data"
 	}
 
 	return buf.String()
@@ -192,7 +199,7 @@ func faq(templates map[string]*template.Template, logger *syslog.Writer, params 
 	buf := bytes.NewBuffer(make([]byte, 0))
 	if err := templates["faq.html"].Execute(buf, nil); err != nil {
 		logError(logger, err)
-		return fmt.Sprintf("error formatting faq")
+		return "error formatting faq"
 	}
 
 	return buf.String()
