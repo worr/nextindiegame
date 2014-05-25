@@ -2,6 +2,11 @@ ng = (function() {
 	var template = "A _ about _ in _";
 
 	var getNewGame = function() {
+		if (window.location.pathname.match(/\/l\//)) {
+			window.location = "/";
+			return;
+		}
+
 		var xhr = XMLHttpRequest();
 		xhr.onreadystatechange = updateName;
 		xhr.open("GET", "/api/game/", true);
@@ -33,7 +38,6 @@ ng = (function() {
 
 				var link = document.querySelector("#permalink");
 				link.href = data.Link;
-				link.innerHTML = data.Link;
 			}
 		}
 	};
