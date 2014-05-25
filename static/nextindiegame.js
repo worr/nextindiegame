@@ -7,7 +7,7 @@ ng = (function() {
 			return;
 		}
 
-		var xhr = XMLHttpRequest();
+		var xhr = new XMLHttpRequest();
 		xhr.onreadystatechange = updateName;
 		xhr.open("GET", "/api/game/", true);
 		xhr.send(null);
