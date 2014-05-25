@@ -5,19 +5,27 @@
 	font-family: "Open Sans Condensed", sans-serif;
 }
 
+header,nav,section,footer {
+	width: 70%;
+	margin-left: 15%;
+	margin-right: 15%;
+}
+
+nav {
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
 header {
 	font-size: 5em;
 	text-align: center;
 	font-family: "Open Sans Condensed", sans-serif;
 }
 
-nav,section {
-	text-align: center;
-}
-
 body {
 	background-color: #f6ede6;
 	font-family: sans-serif;
+	text-align: center;
 }
 
 a {
@@ -55,4 +63,12 @@ a:active, a:hover {
 	outline: none;
 	-webkit-box-shadow: none;
 	box-shadow: none;
+}
+
+.faq-title {
+	font-size: 1.2em;
+	margin: 2px;
+}
+
+.faq-body {
 }
