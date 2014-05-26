@@ -26,15 +26,17 @@ ng = (function() {
 					document.querySelector("#game").innerHTML = data;
 				}
 
-				if (data.Genre) {
+				if (data && data.Genre) {
 					text = text.replace(/_/, data.Genre).
 						replace(/_/, data.Emotion).
 						replace(/_/, data.Fantasy);
 					if (data.Genre.match(/^[AEIOUaeiou](?!ne\b)/)) {
 						text = text.replace(/^A/, "An");
 					}
+				} else if (data) {
+					text = data.Error;
 				} else {
-					text = data.Error
+					text = "failed to grab a game";
 				}
 
 				document.querySelector("#game").innerHTML = text;
