@@ -10,6 +10,7 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/go-martini/martini"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/martini-contrib/binding"
 	"html/template"
 	"log"
 	"log/syslog"
@@ -17,6 +18,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
 const GENRE_TABLE = "genre"
@@ -46,6 +48,12 @@ type Game struct {
 
 type ApplicationError struct {
 	Error string
+}
+
+type AdminForm struct {
+	Genre	string `form:"genre"`
+	Emotion	string `form:"emotion"`
+	Fantasy	string `form:"fantasy"`
 }
 
 // A helper function to fetch a random val from a table
@@ -79,6 +87,21 @@ func getLink(genreId, emotionId, fantasyId int) string {
 		genreId,
 		emotionId,
 		fantasyId)
+}
+
+func insertVals(db *sql.DB, table string, val []string) error {
+	for _, v := range val {
+		if len(v) == 0 {
+			continue
+		}
+
+		fmt.Println(v)
+		if _, err := db.Exec(fmt.Sprintf("insert into %s (value) values (?)", table), v); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func NewRandomGame(db *sql.DB) (*Game, error) {
@@ -195,7 +218,7 @@ func index(db *sql.DB, templates map[string]*template.Template, logger *syslog.W
 	return buf.String()
 }
 
-func faq(templates map[string]*template.Template, logger *syslog.Writer, params martini.Params) string {
+func faq(templates map[string]*template.Template, logger *syslog.Writer) string {
 	buf := bytes.NewBuffer(make([]byte, 0))
 	if err := templates["faq.html"].Execute(buf, nil); err != nil {
 		logError(logger, err)
@@ -205,7 +228,7 @@ func faq(templates map[string]*template.Template, logger *syslog.Writer, params 
 	return buf.String()
 }
 
-func admin(templates map[string]*template.Template, logger *syslog.Writer, params martini.Params) string {
+func admin(templates map[string]*template.Template, logger *syslog.Writer) string {
 	buf := bytes.NewBuffer(make([]byte, 0))
 	if err := templates["admin.html"].Execute(buf, nil); err != nil {
 		logError(logger, err)
@@ -213,6 +236,29 @@ func admin(templates map[string]*template.Template, logger *syslog.Writer, param
 	}
 
 	return buf.String()
+}
+
+func addGames(db *sql.DB, logger *syslog.Writer, params martini.Params, form AdminForm) string {
+	genres := strings.Split(form.Genre, "\r\n")
+	emotions := strings.Split(form.Emotion, "\r\n")
+	fantasies := strings.Split(form.Fantasy, "\r\n")
+
+	if err := insertVals(db, "genre", genres); err != nil {
+		logError(logger, err)
+		return fmt.Sprintf("bad: %v", err)
+	}
+
+	if err := insertVals(db, "emotion", emotions); err != nil {
+		logError(logger, err)
+		return fmt.Sprintf("bad: %v", err)
+	}
+
+	if err := insertVals(db, "fantasy", fantasies); err != nil {
+		logError(logger, err)
+		return fmt.Sprintf("bad: %v", err)
+	}
+
+	return "ok"
 }
 
 // Add a template that inherits from the base template (everything)
@@ -271,6 +317,7 @@ func start(context *cli.Context) {
 	m.Get("/api/game/", randGame)
 	m.Get("/faq", faq)
 	m.Get("/admin", admin)
+	m.Post("/admin", binding.Bind(AdminForm{}), addGames)
 
 	m.Use(martini.Static("static"))
 
