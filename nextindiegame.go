@@ -205,6 +205,16 @@ func faq(templates map[string]*template.Template, logger *syslog.Writer, params 
 	return buf.String()
 }
 
+func admin(templates map[string]*template.Template, logger *syslog.Writer, params martini.Params) string {
+	buf := bytes.NewBuffer(make([]byte, 0))
+	if err := templates["admin.html"].Execute(buf, nil); err != nil {
+		logError(logger, err)
+		return "error formatting admin"
+	}
+
+	return buf.String()
+}
+
 // Add a template that inherits from the base template (everything)
 func addTemplate(cfg *Config, templates map[string]*template.Template, name string) error {
 	var err error
@@ -238,7 +248,7 @@ func start(context *cli.Context) {
 	}
 	defer db.Close() // Will never close lololol
 
-	for _, template := range []string{"main.html", "faq.html"} {
+	for _, template := range []string{"main.html", "faq.html", "admin.html"} {
 		if err = addTemplate(&cfg, templates, template); err != nil {
 			log.Fatalf("Could not compile template %v: %v", template, err)
 		}
@@ -260,6 +270,7 @@ func start(context *cli.Context) {
 	m.Get("/l/:link", index)
 	m.Get("/api/game/", randGame)
 	m.Get("/faq", faq)
+	m.Get("/admin", admin)
 
 	m.Use(martini.Static("static"))
 

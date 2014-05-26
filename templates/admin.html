@@ -1,0 +1,21 @@
+{{ define "title" }}Admin{{ end }}
+
+{{ define "content" }}
+<section>
+	<form action="/admin" method="POST">
+		<div>
+			<label for="genre">Genre</label>
+			<textarea name="genre"></textarea>
+		</div>
+		<div>
+			<label for="emotion">Emotional component</label>
+			<textarea name="emotion"></textarea>
+		</div>
+		<div>
+			<label for="fantasy">Sci-fi/Fantasy setting</label>
+			<textarea name="fantasy"></textarea>
+		</div>
+		<input type="submit">
+	</form>
+</section>
+{{ end }}
