@@ -30,6 +30,9 @@ ng = (function() {
 					text = text.replace(/_/, data.Genre).
 						replace(/_/, data.Emotion).
 						replace(/_/, data.Fantasy);
+					if (data.Genre.match(/^[AEIOUaeiou](?!ne\b)/)) {
+						text = text.replace(/^A/, "An");
+					}
 				} else {
 					text = data.Error
 				}
