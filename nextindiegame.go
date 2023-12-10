@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
-	"code.google.com/p/gcfg"
+	"gopkg.in/gcfg.v1"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	"github.com/go-martini/martini"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/martini-contrib/binding"
@@ -329,7 +329,7 @@ func main() {
 	app.Name = "nextindiegame"
 	app.Usage = "Randomly generate terrible indie game titles"
 	app.Flags = []cli.Flag{
-		cli.StringFlag{"config, c", CONFIG_FILE, "Location of config file"},
+		cli.StringFlag{Name: "config, c", Value: CONFIG_FILE, Usage: "Location of config file"},
 	}
 
 	app.Action = start
